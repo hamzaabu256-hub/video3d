@@ -62,7 +62,15 @@ else:
     tmp = ROOT / "out" / "tmp" / args.episode; tmp.mkdir(parents=True, exist_ok=True)
     audio_chunks.append(np.zeros(INTRO * SPF, np.float32))
     async def tts(text, voice, rate, pitch, path):
-        await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch).save(str(path))
+        kw = {}
+        if rate not in (None, "", "+0%"): kw["rate"] = rate
+        if pitch not in (None, "", "+0Hz"): kw["pitch"] = pitch
+        try:
+            await edge_tts.Communicate(text, voice, **kw).save(str(path))
+        except Exception as e:
+            print("edge-tts failed -> gTTS fallback:", type(e).__name__)
+            from gtts import gTTS
+            gTTS(text, lang="ar" if voice.startswith("ar") else "en").save(str(path))
     def pcm(path):
         r = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-f", "s16le", "-ac", "1", "-ar", str(SR), "-"], capture_output=True, check=True)
         return np.frombuffer(r.stdout, dtype=np.int16).astype(np.float32) / 32768
