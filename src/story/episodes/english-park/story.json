@@ -1,0 +1,19 @@
+{
+  "title": "A Walk in the Park",
+  "subtitle": "Learning English",
+  "outro": "See you next time!",
+  "set": "park",
+  "music": "calm",
+  "characters": {
+    "sam": { "name": "Sam", "voice": "en-US-GuyNeural", "color": "#8ecae6",
+      "spec": { "skin": "#f2c9a0", "shirt": "#e07a2f", "pants": "#3a4a6a", "hair": "#5a3a22", "hat": "#2a6f97" } },
+    "mia": { "name": "Mia", "voice": "en-US-JennyNeural", "color": "#ffafcc", "scale": 0.8,
+      "spec": { "skin": "#e9bd94", "shirt": "#7bb661", "pants": "#4a3a6a", "hair": "#1f1612", "long": true } }
+  },
+  "lines": [
+    { "who": "sam", "text": "What a beautiful day for a walk, Mia!", "anim": "talk", "emotion": "happy", "shot": "two" },
+    { "who": "mia", "text": "Yes! Look at those trees and the blue sky.", "anim": "point", "emotion": "happy", "shot": "medium" },
+    { "who": "sam", "text": "Shall we sit on the bench for a while?", "anim": "talk", "emotion": "neutral", "shot": "orbit" },
+    { "who": "mia", "text": "Great idea. Let's go!", "anim": "dance", "emotion": "happy", "shot": "two" }
+  ]
+}

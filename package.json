@@ -1,0 +1,25 @@
+{
+  "name": "demo3d-colab",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "new": "python3 tools/new_episode.py",
+    "voice": "python3 tools/build_story.py",
+    "registry": "python3 tools/gen_registry.py"
+  },
+  "dependencies": {
+    "@react-three/fiber": "8.16.8",
+    "@remotion/cli": "4.0.250",
+    "@remotion/three": "4.0.250",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.250",
+    "three": "0.165.0"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.3",
+    "@types/three": "0.165.0",
+    "typescript": "5.4.5"
+  }
+}

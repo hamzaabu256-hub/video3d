@@ -1,0 +1,17 @@
+{
+  "title": "فيديو ثلاثي الأبعاد بالكود",
+  "subtitle": "Remotion + Three.js",
+  "outro": "شكراً لمتابعتكم",
+  "set": "office",
+  "music": "calm",
+  "characters": {
+    "host": { "name": "سالم", "voice": "ar-EG-ShakirNeural", "color": "#ffd166",
+      "spec": { "skin": "#f2c9a0", "shirt": "#6a86b8", "pants": "#2e3a56", "hair": "#3a2a22", "glasses": true, "tie": "#c0392b" } }
+  },
+  "lines": [
+    { "who": "host", "text": "أهلاً بكم! اليوم سنصنع فيديو ثلاثي الأبعاد كامل بالكود.", "anim": "talk", "emotion": "happy", "shot": "medium" },
+    { "who": "host", "text": "كل شيء هنا يتولد برمجياً: الشخصية والمكتب والكاميرا.", "anim": "point", "emotion": "neutral", "shot": "wide" },
+    { "who": "host", "text": "وهل تعلمون؟ الصوت نفسه يحرّك الفم تلقائياً!", "anim": "talk", "emotion": "surprised", "shot": "close" },
+    { "who": "host", "text": "جرّبوا بأنفسكم، والنتيجة ستبهركم.", "anim": "celebrate", "emotion": "happy", "shot": "low" }
+  ]
+}

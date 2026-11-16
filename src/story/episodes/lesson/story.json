@@ -1,0 +1,19 @@
+{
+  "title": "درس العلوم",
+  "subtitle": "ما هي الجاذبية؟",
+  "outro": "أحسنتم!",
+  "set": "classroom",
+  "music": "calm",
+  "characters": {
+    "teacher": { "name": "الأستاذ كريم", "voice": "ar-SA-HamedNeural", "color": "#ffd166",
+      "spec": { "skin": "#e6b98f", "shirt": "#f0f0f0", "pants": "#3b3b4f", "hair": "#2b2b2b", "glasses": true, "beard": true, "tie": "#2a6f97" } },
+    "student": { "name": "يوسف", "voice": "ar-EG-ShakirNeural", "rate": "+10%", "pitch": "+25Hz", "color": "#9bf6ff", "scale": 0.65,
+      "spec": { "skin": "#f2c9a0", "shirt": "#3b82f6", "pants": "#1f2937", "hair": "#3a2a22" } }
+  },
+  "lines": [
+    { "who": "teacher", "text": "صباح الخير يا شباب! اليوم سنتعلم عن الجاذبية.", "anim": "talk", "emotion": "happy", "shot": "two" },
+    { "who": "student", "text": "أستاذ، لماذا لا نطير في الهواء؟", "anim": "talk", "emotion": "surprised", "shot": "medium" },
+    { "who": "teacher", "text": "سؤال ممتاز! الأرض تجذبنا نحوها بقوة تسمى الجاذبية.", "anim": "point", "emotion": "happy", "shot": "medium", "react": { "student": { "emotion": "happy" } } },
+    { "who": "student", "text": "أفهمت الآن! شكراً يا أستاذ.", "anim": "celebrate", "emotion": "happy", "shot": "low" }
+  ]
+}

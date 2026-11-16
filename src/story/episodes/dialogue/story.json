@@ -1,0 +1,20 @@
+{
+  "title": "بودكاست التقنية",
+  "subtitle": "حلقة خاصة",
+  "outro": "إلى اللقاء في الحلقة القادمة",
+  "set": "studio",
+  "music": "upbeat",
+  "characters": {
+    "salem": { "name": "سالم", "voice": "ar-EG-ShakirNeural", "color": "#ffd166",
+      "spec": { "skin": "#e6b98f", "shirt": "#2f6f73", "pants": "#222a3a", "hair": "#2b1d17", "beard": true } },
+    "layla": { "name": "ليلى", "voice": "ar-EG-SalmaNeural", "color": "#ff9ecb",
+      "spec": { "skin": "#f2c9a0", "shirt": "#b5486a", "pants": "#2e3a56", "hair": "#4a2a1a", "long": true } }
+  },
+  "lines": [
+    { "who": "salem", "text": "أهلاً ليلى، حدثينا عن الذكاء الاصطناعي في الفيديو.", "anim": "talk", "emotion": "happy", "shot": "two" },
+    { "who": "layla", "text": "اليوم نستطيع توليد فيديو كامل من نص بسيط!", "anim": "talk", "emotion": "happy", "shot": "medium", "react": { "salem": { "emotion": "surprised" } } },
+    { "who": "salem", "text": "حقاً؟ وهل يحتاج الأمر إلى خبرة طويلة؟", "anim": "think", "emotion": "neutral", "shot": "close" },
+    { "who": "layla", "text": "أبداً، تكتب السكربت وتضغط تشغيل.", "anim": "shrug", "emotion": "happy", "shot": "orbit" },
+    { "who": "salem", "text": "رائع! شكراً لك على هذا الشرح.", "anim": "clap", "emotion": "happy", "shot": "two", "react": { "layla": { "emotion": "happy" } } }
+  ]
+}
