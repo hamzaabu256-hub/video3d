@@ -3,6 +3,9 @@ import type { EpisodeData } from "./types";
 import dialogue_story from "./episodes/dialogue/story.json";
 import dialogue_timeline from "./episodes/dialogue/timeline.json";
 import dialogue_mouth from "./episodes/dialogue/mouth.json";
+import dream_people_story from "./episodes/dream-people/story.json";
+import dream_people_timeline from "./episodes/dream-people/timeline.json";
+import dream_people_mouth from "./episodes/dream-people/mouth.json";
 import english_park_story from "./episodes/english-park/story.json";
 import english_park_timeline from "./episodes/english-park/timeline.json";
 import english_park_mouth from "./episodes/english-park/mouth.json";
@@ -14,6 +17,7 @@ import lesson_timeline from "./episodes/lesson/timeline.json";
 import lesson_mouth from "./episodes/lesson/mouth.json";
 export const EPISODES: Record<string, EpisodeData> = {
   "dialogue": { story: dialogue_story as any, timeline: dialogue_timeline as any, mouth: dialogue_mouth as any },
+  "dream-people": { story: dream_people_story as any, timeline: dream_people_timeline as any, mouth: dream_people_mouth as any },
   "english-park": { story: english_park_story as any, timeline: english_park_timeline as any, mouth: english_park_mouth as any },
   "intro": { story: intro_story as any, timeline: intro_timeline as any, mouth: intro_mouth as any },
   "lesson": { story: lesson_story as any, timeline: lesson_timeline as any, mouth: lesson_mouth as any },
