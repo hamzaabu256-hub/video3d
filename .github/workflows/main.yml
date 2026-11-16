@@ -1,0 +1,86 @@
+name: Render Video
+on:
+  workflow_dispatch:
+    inputs:
+      composition:
+        description: 'Composition ID (e.g., dream-people)'
+        default: 'dream-people'
+        required: true
+      total_frames:
+        description: 'Total frames (from Colab logs)'
+        default: '15411'
+        required: true
+      chunks:
+        description: 'Number of parallel chunks (max 20)'
+        default: '20'
+        required: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          python3 -c "
+          import json, math, os
+          total = int(os.environ['TOTAL'])
+          n = int(os.environ['CHUNKS'])
+          size = math.ceil(total / n)
+          items = [{'idx': i, 'start': i * size, 'end': min(total - 1, (i + 1) * size - 1)} for i in range(n)]
+          print(f'matrix={json.dumps({\"include\": items})}')
+          " >> $GITHUB_OUTPUT
+        env:
+          TOTAL: ${{ github.event.inputs.total_frames }}
+          CHUNKS: ${{ github.event.inputs.chunks }}
+
+  render:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Install Chrome for Remotion
+        run: npx remotion browser ensure
+      - name: Render chunk
+        run: |
+          npx remotion render src/index.ts ${{ github.event.inputs.composition }} out/chunk_${{ matrix.idx }}.mp4 --frames=${{ matrix.start }}-${{ matrix.end }} --gl=swangle --concurrency=2
+      - name: Upload chunk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunk_${{ matrix.idx }}
+          path: out/chunk_${{ matrix.idx }}.mp4
+          retention-days: 1
+
+  merge:
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all chunks
+        uses: actions/download-artifact@v4
+        with:
+          path: chunks
+          pattern: chunk_*
+          merge-multiple: true
+      
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        
+      - name: Merge chunks
+        run: |
+          cd chunks
+          for f in chunk_*.mp4; do echo "file '$f'" >> list.txt; done
+          ffmpeg -f concat -safe 0 -i list.txt -c copy final_video.mp4
+          
+      - name: Upload Final Video
+        uses: actions/upload-artifact@v4
+        with:
+          name: Final_Video_MP4
+          path: chunks/final_video.mp4
