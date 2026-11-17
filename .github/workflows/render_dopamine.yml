@@ -1,7 +1,7 @@
-name: Render Dopamine Short
+name: Render Dopamine Final
 
 on:
-  workflow_dispatch: # تشغيل يدوي بضغطة زر
+  workflow_dispatch: # تشغيل يدوي
 
 jobs:
   render:
@@ -19,12 +19,17 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 python3-pip ffmpeg fonts-noto-core libnss3 libdbus-1-3 libatk1.0-0 libasound2t64 libxrandr2 libxkbcommon-x11-0 libxfixes3 libxcomposite1 libxdamage1 libgbm1 libcups2 libpango-1.0-0 libcairo2 libatk-bridge2.0-0
-          # تمت إضافة numpy هنا
-          pip install edge-tts numpy
+          sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-color-emoji libnss3 libdbus-1-3 libatk1.0-0 libasound2t64 libxrandr2 libxkbcommon-x11-0 libxfixes3 libxcomposite1 libxdamage1 libgbm1 libcups2 libatk-bridge2.0-0 libpango-1.0-0 libcairo2
+          
+      - name: Install Python & Audio Libraries
+        run: |
+          pip install edge-tts gTTS numpy requests
 
       - name: Install Node Dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: Ensure Browser
+        run: npx remotion browser ensure
 
       - name: Create Story File (Dopamine Topic)
         run: |
@@ -67,32 +72,9 @@ jobs:
           }
           EOF
 
-      - name: Register Composition in Root.tsx
-        run: |
-          python3 - << 'EOF'
-          import pathlib, re
-          root_path = pathlib.Path("src/Root.tsx")
-          if root_path.exists():
-              root_code = root_path.read_text()
-              ep_name = "dopamine"
-              if ep_name not in root_code:
-                  pattern = r'(<Composition[^>]+id="[^"]+"[^>]+component=\{[^}]+\}[^>]+/>)'
-                  match = list(re.finditer(pattern, root_code))
-                  if match:
-                      last_comp = match[-1].group(1)
-                      new_comp = f'\n      <Composition\n        id="{ep_name}"\n        component={{Story}}\n        durationInFrames={{1500}}\n        fps={{30}}\n        width={{1080}}\n        height={{1920}}\n        defaultProps={{{{ episode: "{ep_name}" }}}}\n      />'
-                      root_code = root_code.replace(last_comp, last_comp + new_comp)
-                      root_path.write_text(root_code)
-                      print("✅ Registered dopamine in Root.tsx")
-          else:
-              print("Root.tsx not found!")
-          EOF
-
-      - name: Generate Audio
+      - name: Generate Audio & Register Episode
+        # هذا السكربت هو سري، سيقوم بتوليد الصوت وتسجيل الحلقة في النظام تلقائياً
         run: python3 tools/build_story.py dopamine
-
-      - name: Ensure Browser
-        run: npx remotion browser ensure
 
       - name: Render Video
         run: npx remotion render src/index.ts dopamine out/final.mp4 --gl=swangle
