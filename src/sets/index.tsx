@@ -15,8 +15,8 @@ const Ground: React.FC<{ color: string; z?: number; rough?: number; metal?: numb
 );
 const Wall: React.FC<{ color: string }> = ({ color }) => (
   <>
-    <mesh position={[0, 1.6, -4.2]} receiveShadow><planeGeometry args={[40, 3.2]} /><meshStandardMaterial color={color} roughness={0.95} /></mesh>
-    <mesh position={[-7, 1.6, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow><planeGeometry args={[40, 3.2]} /><meshStandardMaterial color={color} roughness={0.95} /></mesh>
+    <mesh position={[0, 6, -4.2]} receiveShadow><planeGeometry args={[40, 12]} /><meshStandardMaterial color={color} roughness={0.95} /></mesh>
+    <mesh position={[-7, 6, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow><planeGeometry args={[40, 12]} /><meshStandardMaterial color={color} roughness={0.95} /></mesh>
   </>
 );
 

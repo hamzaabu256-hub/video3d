@@ -47,8 +47,8 @@ const Plant: React.FC<{ pos: V3 }> = ({ pos }) => (
 export const Office: React.FC<{ screens?: string[]; children?: React.ReactNode }> = ({ screens = ["chat", "chat", "chat"], children }) => (
   <group>
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[40, 40]} /><meshStandardMaterial color="#8b7d6b" roughness={0.9} /></mesh>
-    <mesh position={[0, 1.6, -4.2]} receiveShadow><planeGeometry args={[40, 3.2]} /><meshStandardMaterial color="#e8e2d8" roughness={0.95} /></mesh>
-    <mesh position={[-7, 1.6, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow><planeGeometry args={[40, 3.2]} /><meshStandardMaterial color="#ddd6ca" roughness={0.95} /></mesh>
+    <mesh position={[0, 6, -4.2]} receiveShadow><planeGeometry args={[40, 12]} /><meshStandardMaterial color="#e8e2d8" roughness={0.95} /></mesh>
+    <mesh position={[-7, 6, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow><planeGeometry args={[40, 12]} /><meshStandardMaterial color="#ddd6ca" roughness={0.95} /></mesh>
     {/* نافذة */}
     <Box s={[2.6, 1.6, 0.05]} p={[-1.6, 1.7, -4.15]} c="#f4f4f4" cast={false} />
     <Box s={[2.4, 1.4, 0.02]} p={[-1.6, 1.7, -4.11]} c="#bfe0ff" emissive="#9fd0ff" cast={false} />

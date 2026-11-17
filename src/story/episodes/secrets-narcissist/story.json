@@ -1,0 +1,32 @@
+{
+  "title": "هل كل من يؤذيك نرجسي؟",
+  "subtitle": "أسرار النفس",
+  "brand": "أسرار النفس",
+  "outro": "اشترك في أسرار النفس 🔔",
+  "outroSub": "محتوى توعوي وليس تشخيصاً طبياً",
+  "set": "studio",
+  "music": "mystery",
+  "sfx": true,
+  "introFrames": 0,
+  "outroFrames": 75,
+  "characters": {
+    "salem": { "name": "سالم", "voice": "ar-EG-ShakirNeural", "gttsPitch": 0.94, "color": "#ffd166",
+      "spec": { "skin": "#e6b98f", "shirt": "#2f6f73", "pants": "#222a3a", "hair": "#2b1d17", "beard": true } },
+    "layla": { "name": "ليلى", "voice": "ar-EG-SalmaNeural", "gttsPitch": 1.16, "color": "#ff9ecb",
+      "spec": { "skin": "#f2c9a0", "shirt": "#b5486a", "pants": "#2e3a56", "hair": "#4a2a1a", "long": true } }
+  },
+  "lines": [
+    { "who": "salem", "hook": "هل كل من يؤذيك نرجسي؟ 🚨", "text": "انتبه! أنت غالباً تستخدم هذه الكلمة بشكل خاطئ… كلمة نرجسي!", "anim": "point", "emotion": "surprised", "shot": "close" },
+    { "who": "layla", "text": "صحيح. اليوم كل شخص مزعج يُسمّى نرجسياً أو توكسيك.", "anim": "talk", "emotion": "neutral", "shot": "medium", "react": { "salem": { "emotion": "surprised" } } },
+    { "who": "salem", "text": "وماذا في ذلك؟ أليس هذا صحيحاً؟", "anim": "think", "emotion": "neutral", "shot": "two" },
+    { "who": "layla", "text": "لا. اضطراب الشخصية النرجسية تشخيص طبي، لا يضعه إلا مختص بعد تقييم.", "anim": "point", "emotion": "neutral", "shot": "close" },
+    { "who": "layla", "text": "أما كلمة توكسيك فهي شائعة فقط، وليست مصطلحاً علمياً.", "anim": "shrug", "emotion": "neutral", "shot": "orbit" },
+    { "who": "salem", "text": "إذن قد يؤذيني شخص فعلاً، دون أن يكون نرجسياً؟", "anim": "talk", "emotion": "surprised", "shot": "medium" },
+    { "who": "layla", "text": "بالضبط. الأذى حقيقي، لكن التشخيص ليس مهمتنا.", "anim": "talk", "emotion": "happy", "shot": "two" },
+    { "who": "layla", "text": "اسأل نفسك: ماذا يفعل؟ وما أثره عليّ؟ وما الحد الذي سأضعه؟", "anim": "point", "emotion": "happy", "shot": "close" },
+    { "who": "salem", "text": "وإن استمر الأذى؟", "anim": "think", "emotion": "sad", "shot": "medium" },
+    { "who": "layla", "text": "تحدث مع مختص نفسي. وإذا كنت في خطر فاطلب مساعدة عاجلة.", "anim": "talk", "emotion": "neutral", "shot": "two" },
+    { "who": "salem", "cta": true, "text": "إن أفادك الفيديو، فاضغط إعجاب، واشترك في قناة أسرار النفس، وفعّل الجرس!", "anim": "celebrate", "emotion": "happy", "shot": "two" },
+    { "who": "layla", "cta": true, "text": "واكتب في التعليقات: ما الكلمة النفسية التي تتمنى أن يتوقف الناس عن استخدامها؟", "anim": "clap", "emotion": "happy", "shot": "two", "react": { "salem": { "anim": "wave", "emotion": "happy" } } }
+  ]
+}

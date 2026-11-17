@@ -15,10 +15,14 @@ import intro_mouth from "./episodes/intro/mouth.json";
 import lesson_story from "./episodes/lesson/story.json";
 import lesson_timeline from "./episodes/lesson/timeline.json";
 import lesson_mouth from "./episodes/lesson/mouth.json";
+import secrets_narcissist_story from "./episodes/secrets-narcissist/story.json";
+import secrets_narcissist_timeline from "./episodes/secrets-narcissist/timeline.json";
+import secrets_narcissist_mouth from "./episodes/secrets-narcissist/mouth.json";
 export const EPISODES: Record<string, EpisodeData> = {
   "dialogue": { story: dialogue_story as any, timeline: dialogue_timeline as any, mouth: dialogue_mouth as any },
   "dream-people": { story: dream_people_story as any, timeline: dream_people_timeline as any, mouth: dream_people_mouth as any },
   "english-park": { story: english_park_story as any, timeline: english_park_timeline as any, mouth: english_park_mouth as any },
   "intro": { story: intro_story as any, timeline: intro_timeline as any, mouth: intro_mouth as any },
   "lesson": { story: lesson_story as any, timeline: lesson_timeline as any, mouth: lesson_mouth as any },
+  "secrets-narcissist": { story: secrets_narcissist_story as any, timeline: secrets_narcissist_timeline as any, mouth: secrets_narcissist_mouth as any },
 };
