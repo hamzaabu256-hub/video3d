@@ -1,0 +1,103 @@
+name: Render Dopamine Short
+
+on:
+  workflow_dispatch: # تشغيل يدوي بضغطة زر
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip ffmpeg fonts-noto-core libnss3 libdbus-1-3 libatk1.0-0 libasound2t64 libxrandr2 libxkbcommon-x11-0 libxfixes3 libxcomposite1 libxdamage1 libgbm1 libcups2 libpango-1.0-0 libcairo2 libatk-bridge2.0-0
+          pip install edge-tts
+
+      - name: Install Node Dependencies
+        run: npm install
+
+      - name: Create Story File (Dopamine Topic)
+        run: |
+          mkdir -p src/story/episodes/dopamine
+          cat > src/story/episodes/dopamine/story.json << 'EOF'
+          {
+            "title": "حلقة الدوبامين: كيف تدمن ما يؤذيك؟",
+            "subtitle": "أسرار النفس",
+            "hook": "لماذا لا تستطيع ترك هاتفك؟",
+            "outro": "تحكم في عقلك",
+            "set": "studio",
+            "music": "calm",
+            "captions": true,
+            "transition": "fade",
+            "entrance": true,
+            "characters": {
+              "host": {
+                "name": "راوي أسرار النفس", "voice": "ar-EG-ShakirNeural", "rate": "+5%", "pitch": "+0Hz",
+                "color": "#ffd166", "scale": 0.9,
+                "spec": {"skin": "#f2c9a0", "shirt": "#173f68", "pants": "#202b42", "hair": "#30251f", "glasses": false, "tie": "#d9a441"}
+              },
+              "expert": {
+                "name": "خبيرة نفسية", "voice": "ar-EG-SalmaNeural", "rate": "+0%", "pitch": "+0Hz",
+                "color": "#06d6a0", "scale": 0.9,
+                "spec": {"skin": "#f2c9a0", "shirt": "#ef476f", "pants": "#202b42", "hair": "#30251f", "glasses": true}
+              }
+            },
+            "lines": [
+              {"who": "host", "anim": "point", "emotion": "curious", "shot": "close",
+               "text": "لماذا لا تستطيع ترك هاتفك، رغم أنك تشعر بالملل والتوتر؟"},
+              {"who": "expert", "anim": "talk", "emotion": "surprised", "shot": "medium",
+               "text": "عقلك يقع في فخ يُسمى حلقة الدوبامين. كل إشعار أو تمريرة جديدة تطلق جرعة صغيرة من هرمون المتعة."},
+              {"who": "host", "anim": "think", "emotion": "thoughtful", "shot": "wide",
+               "text": "المشكلة أن هذه المكافأة غير متوقعة، تماماً مثل ماكينة القمار، مما يجعلك تدمن البحث عن المزيد."},
+              {"who": "expert", "anim": "talk", "emotion": "neutral", "shot": "medium",
+               "text": "لتحطيم هذه الحلقة، لا تلوم إرادتك، بل غير بيئتك: أغلق الإشعارات، وضع الهاتف بعيدا أثناء النوم."},
+              {"who": "host", "anim": "shrug", "emotion": "happy", "shot": "orbit",
+               "text": "اضغط لايك واشترك في أسرار النفس لتتعلم كيف تتحكم بعقلك، وليس العكس!"}
+            ]
+          }
+          EOF
+
+      - name: Register Composition in Root.tsx
+        run: |
+          python3 - << 'EOF'
+          import pathlib, re
+          root_path = pathlib.Path("src/Root.tsx")
+          if root_path.exists():
+              root_code = root_path.read_text()
+              ep_name = "dopamine"
+              if ep_name not in root_code:
+                  pattern = r'(<Composition[^>]+id="[^"]+"[^>]+component=\{[^}]+\}[^>]+/>)'
+                  match = list(re.finditer(pattern, root_code))
+                  if match:
+                      last_comp = match[-1].group(1)
+                      new_comp = f'\n      <Composition\n        id="{ep_name}"\n        component={{Story}}\n        durationInFrames={{1500}}\n        fps={{30}}\n        width={{1080}}\n        height={{1920}}\n        defaultProps={{{{ episode: "{ep_name}" }}}}\n      />'
+                      root_code = root_code.replace(last_comp, last_comp + new_comp)
+                      root_path.write_text(root_code)
+                      print("✅ Registered dopamine in Root.tsx")
+          else:
+              print("Root.tsx not found!")
+          EOF
+
+      - name: Generate Audio
+        run: python3 tools/build_story.py dopamine
+
+      - name: Ensure Browser
+        run: npx remotion browser ensure
+
+      - name: Render Video
+        run: npx remotion render src/index.ts dopamine out/final.mp4 --gl=swangle
+
+      - name: Upload Video
+        uses: actions/upload-artifact@v4
+        with:
+          name: dopamine-video
+          path: out/final.mp4
