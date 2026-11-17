@@ -22,25 +22,46 @@ jobs:
       - name: Install dependencies
         run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
       
+      - name: Install Remotion renderer and bundler
+        run: npm install --no-save @remotion/bundler @remotion/renderer
+
       - name: Get Total Frames Automatically
         id: get_frames
         env:
           COMP: ${{ inputs.composition }}
         run: |
-          echo "🔍 جاري حساب عدد الإطارات للفيديو: $COMP"
-          # تشغيل الأمر وإزالة ألوان الطرفية
-          OUTPUT=$(npx remotion compositions src/index.ts 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
-          # استخراج عدد الإطارات
-          FRAMES=$(echo "$OUTPUT" | grep -E "^\s*${COMP}\s+" | awk '{print $4}' | grep -E '^[0-9]+$')
-          
+          cat > get-frames.js << 'EOF'
+          const { bundle } = require('@remotion/bundler');
+          const { getCompositions } = require('@remotion/renderer');
+
+          (async () => {
+            const compId = process.env.COMP;
+            try {
+              const bundled = await bundle({
+                entryPoint: require.resolve('./src/index.ts'),
+              });
+              const compositions = await getCompositions({
+                serveUrl: bundled,
+                inputProps: {},
+              });
+              const comp = compositions.find((c) => c.id === compId);
+              if (!comp) {
+                console.error(`Composition "${compId}" not found.`);
+                process.exit(1);
+              }
+              console.log(comp.durationInFrames);
+            } catch (err) {
+              console.error(err);
+              process.exit(1);
+            }
+          })();
+          EOF
+          FRAMES=$(node get-frames.js)
           if [ -z "$FRAMES" ]; then
-            echo "::error::لم يتم العثور على التركيبة '$COMP' أو أنها ليست فيديو (Still)."
-            echo "المخرجات المتاحة:"
-            echo "$OUTPUT"
+            echo "::error::Failed to get frames."
             exit 1
           fi
-          
-          echo "✅ تم العثور على $FRAMES إطار."
+          echo "✅ Total frames: $FRAMES"
           echo "frames=$FRAMES" >> "$GITHUB_OUTPUT"
 
       - id: m
