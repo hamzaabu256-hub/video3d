@@ -1,0 +1,31 @@
+name: Make voice
+on:
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: "اسم الحلقة"
+        default: "secrets-narcissist"
+      require_edge:
+        description: "1 = صوت edge-tts فقط، 0 = السماح بالبديل"
+        default: "1"
+permissions:
+  contents: write
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -U edge-tts gTTS numpy
+      - run: python3 tools/build_story.py ${{ inputs.episode }}
+        env:
+          REQUIRE_EDGE: ${{ inputs.require_edge }}
+      - run: |
+          git config user.name "voice-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/episodes src/story/episodes
+          git commit -m "voice for ${{ inputs.episode }}" || echo "nothing"
+          git push
