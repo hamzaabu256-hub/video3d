@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          
       - name: Install dependencies
         run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
       
@@ -32,7 +33,7 @@ jobs:
         run: |
           cat > get-frames.js << 'EOF'
           const { bundle } = require('@remotion/bundler');
-          const { getCompositions } = require('@remotion/renderer');
+          const { selectComposition } = require('@remotion/renderer');
 
           (async () => {
             const compId = process.env.COMP;
@@ -40,17 +41,14 @@ jobs:
               const bundled = await bundle({
                 entryPoint: require.resolve('./src/index.ts'),
               });
-              const compositions = await getCompositions({
+              const composition = await selectComposition({
                 serveUrl: bundled,
+                id: compId,
                 inputProps: {},
               });
-              const comp = compositions.find((c) => c.id === compId);
-              if (!comp) {
-                console.error(`Composition "${compId}" not found.`);
-                process.exit(1);
-              }
-              console.log(comp.durationInFrames);
+              console.log(composition.durationInFrames);
             } catch (err) {
+              console.error(`Failed to find composition "${compId}"`);
               console.error(err);
               process.exit(1);
             }
