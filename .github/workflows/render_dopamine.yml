@@ -74,7 +74,7 @@ jobs:
       - name: Generate Audio
         run: python3 tools/build_story.py dopamine
 
-      - name: Register Composition in Root.tsx
+      - name: Register Composition in Root.tsx (Smart Clone)
         run: |
           python3 - << 'EOF'
           import pathlib, re
@@ -82,38 +82,26 @@ jobs:
           if root_path.exists():
               code = root_path.read_text()
               ep_id = "dopamine"
-              # التحقق من عدم وجودها مسبقاً
               if f'id="{ep_id}"' not in code:
-                  # البحث عن آخر </RemotionRoot> أو </> لإضافة الـ Composition قبلها
-                  # هذا يفترض أن الجذر يعيد JSX
-                  insertion = f'''
-      <Composition
-        id="{ep_id}"
-        component={{Story}}
-        durationInFrames={{1500}}
-        fps={{30}}
-        width={{1080}}
-        height={{1920}}
-        defaultProps={{{{ episode: "{ep_id}" }}}}
-      />
-                  '''
-                  # محاولة الحقن قبل إغلاق RemotionRoot
-                  if '</RemotionRoot>' in code:
-                      code = code.replace('</RemotionRoot>', insertion + '\n    </RemotionRoot>')
-                  elif '</>' in code:
-                      code = code.replace('</>', insertion + '\n    </>')
+                  # البحث عن أي Composition موجود لنسخ هيكله
+                  match = re.search(r'(<Composition[^>]+id="[^"]+"[^>]+/>)', code)
+                  if match:
+                      template = match.group(1)
+                      # استبدال المعرف القديم بالجديد
+                      new_comp = re.sub(r'id="[^"]+"', f'id="{ep_id}"', template)
+                      
+                      # تحديث defaultProps
+                      if 'defaultProps' in new_comp:
+                          new_comp = re.sub(r'defaultProps=\{[^}]+\}', f'defaultProps={{{{ episode: "{ep_id}" }}}}', new_comp)
+                      else:
+                          new_comp = new_comp.replace('/>', f' defaultProps={{{{ episode: "{ep_id}" }}}} />')
+                      
+                      # إضافة الكومبوننت الجديد بعد القديم
+                      code = code.replace(template, template + '\n      ' + new_comp)
+                      root_path.write_text(code)
+                      print(f"✅ Successfully injected {ep_id} into Root.tsx")
                   else:
-                      print("⚠️ Could not find RemotionRoot closing tag. Manual registration may be required.")
-                  
-                  # التأكد من استيراد Story
-                  if 'import { Story }' not in code and 'import {Story}' not in code:
-                      # إضافة استيراد بسيط (قد يحتاج مساراً صحيحاً)
-                      code = 'import { Story } from "./story/Story";\n' + code
-                  
-                  root_path.write_text(code)
-                  print("✅ Registered dopamine in Root.tsx")
-              else:
-                  print("ℹ️ dopamine already registered.")
+                      print("❌ Could not find any Composition to clone.")
           else:
               print("❌ Root.tsx not found!")
           EOF
