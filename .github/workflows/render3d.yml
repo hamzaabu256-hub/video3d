@@ -3,13 +3,10 @@ on:
   workflow_dispatch:
     inputs:
       composition:
-        description: 'Composition id (e.g., touch-effect)'
-        required: true
-      total_frames:
-        description: 'Total frames (e.g., 1500)'
+        description: 'Composition id (مثال: touch-effect)'
         required: true
       chunks:
-        description: 'Parallel jobs (max 20)'
+        description: 'Parallel jobs (أقصى عدد 20)'
         default: '20'
 
 jobs:
@@ -18,9 +15,37 @@ jobs:
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+      
+      - name: Get Total Frames Automatically
+        id: get_frames
+        env:
+          COMP: ${{ inputs.composition }}
+        run: |
+          echo "🔍 جاري حساب عدد الإطارات للفيديو: $COMP"
+          # تشغيل الأمر وإزالة ألوان الطرفية
+          OUTPUT=$(npx remotion compositions src/index.ts 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
+          # استخراج عدد الإطارات
+          FRAMES=$(echo "$OUTPUT" | grep -E "^\s*${COMP}\s+" | awk '{print $4}' | grep -E '^[0-9]+$')
+          
+          if [ -z "$FRAMES" ]; then
+            echo "::error::لم يتم العثور على التركيبة '$COMP' أو أنها ليست فيديو (Still)."
+            echo "المخرجات المتاحة:"
+            echo "$OUTPUT"
+            exit 1
+          fi
+          
+          echo "✅ تم العثور على $FRAMES إطار."
+          echo "frames=$FRAMES" >> "$GITHUB_OUTPUT"
+
       - id: m
         env:
-          TOTAL: ${{ inputs.total_frames }}
+          TOTAL: ${{ steps.get_frames.outputs.frames }}
           CHUNKS: ${{ inputs.chunks }}
         run: |
           python3 - <<'EOF' >> "$GITHUB_OUTPUT"
@@ -64,6 +89,7 @@ jobs:
           path: out/part_${{ matrix.idx }}.mp4
 
   audio:
+    needs: plan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
