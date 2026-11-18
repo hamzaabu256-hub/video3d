@@ -1,0 +1,231 @@
+name: Make video
+
+on:
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: "اسم الحلقة"
+        default: "ep-4"
+      format:
+        description: "vertical او 16x9"
+        default: "vertical"
+      scale:
+        description: "0.5 سريع (540x960) او 1 جودة كاملة (1080x1920)"
+        default: "0.5"
+      jobs:
+        description: "عدد المهام المتوازية (حتى 20)"
+        default: "20"
+      require_edge:
+        description: "1 = صوت edge-tts فقط، 0 = السماح بالصوت البديل"
+        default: "1"
+      topic:
+        description: "موضوع الفيديو ليكتب Gemini السكربت (او auto). فارغ = استخدم story.json الموجود"
+        default: ""
+      gemini_model:
+        description: "اسم نموذج Gemini (اختياري، فارغ = اختيار تلقائي)"
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  EP: ${{ inputs.episode }}
+  FORMAT: ${{ inputs.format }}
+  SCALE: ${{ inputs.scale }}
+  JOBS: ${{ inputs.jobs }}
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      total: ${{ steps.plan.outputs.total }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install -U edge-tts gTTS numpy
+      - name: Write script with Gemini
+        if: ${{ inputs.topic != '' }}
+        run: python3 tools/gen_story.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TOPIC: ${{ inputs.topic }}
+          MODEL: ${{ inputs.gemini_model }}
+      - name: Save script to repo
+        if: ${{ inputs.topic != '' }}
+        run: |
+          git config user.name "video-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add "src/story/episodes/$EP/story.json"
+          git commit -m "script for $EP" || echo "nothing to commit"
+          git push || echo "push skipped"
+      - name: Build voice, music and sfx
+        run: python3 tools/build_story.py "$EP"
+        env:
+          REQUIRE_EDGE: ${{ inputs.require_edge }}
+      - name: Fill missing timelines of other episodes
+        run: |
+          for d in src/story/episodes/*/; do
+            n=$(basename "$d")
+            if [ -f "$d/story.json" ] && { [ ! -f "$d/timeline.json" ] || [ ! -f "$d/mouth.json" ]; }; then
+              echo "dry build for $n"
+              python3 tools/build_story.py "$n" --dry
+            fi
+          done
+      - name: Update registry
+        run: python3 tools/gen_registry.py
+      - name: Plan chunks
+        id: plan
+        run: |
+          python3 - <<'PY'
+          import json, os
+          ep = os.environ["EP"]
+          tl = json.load(open("src/story/episodes/" + ep + "/timeline.json"))
+          n = tl["total"]
+          k = max(1, min(20, int(os.environ["JOBS"])))
+          size = -(-n // k)
+          m = [{"i": i, "a": a, "b": min(a + size, n) - 1} for i, a in enumerate(range(0, n, size))]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("matrix=" + json.dumps(m) + "\n")
+              f.write("total=" + str(n) + "\n")
+          print("frames:", n, "chunks:", len(m))
+          PY
+      - name: Pack assets
+        run: tar czf assets.tgz "public/episodes/$EP" "src/story/episodes/$EP" src/story/registry.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: assets.tgz
+
+  thumb:
+    needs: voice
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: assets
+      - run: tar xzf assets.tgz
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: System libs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-core fonts-noto-color-emoji libnss3 libdbus-1-3 libatk1.0-0t64 libasound2t64 libxrandr2 libxkbcommon-x11-0 libxfixes3 libxcomposite1 libxdamage1 libgbm-dev libcups2t64 libatk-bridge2.0-0t64 libpango-1.0-0 libcairo2
+      - run: npm install --no-audit --no-fund
+      - run: npx remotion still src/index.ts "$EP-thumb" thumb.png --gl=swangle --timeout=180000
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thumb
+          path: thumb.png
+
+  render:
+    needs: voice
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.voice.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: assets
+      - run: tar xzf assets.tgz
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: System libs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-core fonts-noto-color-emoji libnss3 libdbus-1-3 libatk1.0-0t64 libasound2t64 libxrandr2 libxkbcommon-x11-0 libxfixes3 libxcomposite1 libxdamage1 libgbm-dev libcups2t64 libatk-bridge2.0-0t64 libpango-1.0-0 libcairo2
+      - run: npm install --no-audit --no-fund
+      - name: Render chunk
+        run: |
+          COMP="$EP"
+          if [ "$FORMAT" = "16x9" ]; then COMP="$EP-16x9"; fi
+          for try in 1 2 3; do
+            if npx remotion render src/index.ts "$COMP" chunk.mp4 --frames=${{ matrix.a }}-${{ matrix.b }} --muted --scale="$SCALE" --gl=swangle --concurrency="$(nproc)" --timeout=180000; then
+              break
+            fi
+            echo "attempt $try failed"
+            rm -f chunk.mp4
+            if [ "$try" = "3" ]; then exit 1; fi
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chunk-${{ matrix.i }}
+          path: chunk.mp4
+
+  finish:
+    needs: [voice, render, thumb]
+    if: ${{ !cancelled() && needs.voice.result == 'success' && needs.render.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - uses: actions/download-artifact@v4
+        with:
+          name: assets
+      - run: tar xzf assets.tgz
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: chunk-*
+          path: chunks
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: thumb
+      - name: Merge chunks and mix audio
+        env:
+          TOTAL: ${{ needs.voice.outputs.total }}
+        run: |
+          python3 - <<'PY'
+          import glob, os, re, subprocess
+          ep = os.environ["EP"]; n = int(os.environ["TOTAL"])
+          fs = sorted(glob.glob("chunks/chunk-*/chunk.mp4"), key=lambda p: int(re.search(r"chunk-(\d+)/", p).group(1)))
+          print(len(fs), "chunks")
+          open("list.txt", "w").write("".join("file '" + os.path.abspath(f) + "'\n" for f in fs))
+          r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", "list.txt", "-c", "copy", "video_only.mp4"], capture_output=True, text=True)
+          assert r.returncode == 0, r.stderr[-400:]
+          base = "public/episodes/" + ep + "/"
+          inputs = ["-i", "video_only.mp4", "-i", base + "voice.wav"]
+          parts = ["[1:a]anull[v]"]
+          labels = ["[v]"]
+          idx = 2
+          if os.path.exists(base + "music.wav"):
+              inputs += ["-i", base + "music.wav"]
+              parts.append("[" + str(idx) + ":a]volume=0.13,afade=t=out:st=" + str(round(n / 30 - 1.5, 2)) + ":d=1.5[m]")
+              labels.append("[m]")
+              idx += 1
+          if os.path.exists(base + "sfx.wav"):
+              inputs += ["-i", base + "sfx.wav"]
+              parts.append("[" + str(idx) + ":a]volume=0.7[s]")
+              labels.append("[s]")
+          fc = ";".join(parts) + ";" + "".join(labels) + "amix=inputs=" + str(len(labels)) + ":duration=first:normalize=0,aresample=48000[a]"
+          cmd = ["ffmpeg", "-y", "-v", "error"] + inputs + ["-filter_complex", fc, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "160k", "-shortest", "final.mp4"]
+          r = subprocess.run(cmd, capture_output=True, text=True)
+          assert r.returncode == 0, r.stderr[-400:]
+          print("final.mp4", round(os.path.getsize("final.mp4") / 1e6, 1), "MB")
+          PY
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="$EP-run${{ github.run_number }}"
+          FILES="final.mp4"
+          if [ -f thumb.png ]; then FILES="$FILES thumb.png"; fi
+          gh release create "$TAG" $FILES --title "$EP ($FORMAT)" --notes "Episode: $EP | format: $FORMAT | scale: $SCALE"
+          echo "https://github.com/${{ github.repository }}/releases/tag/$TAG"
+          
