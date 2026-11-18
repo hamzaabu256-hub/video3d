@@ -1,11 +1,11 @@
-name: Make video
+name: Make video 3
 
 on:
   workflow_dispatch:
     inputs:
       episode:
         description: "اسم الحلقة"
-        default: "secrets-narcissist"
+        default: "ep-4"
       format:
         description: "vertical او 16x9"
         default: "vertical"
@@ -18,6 +18,12 @@ on:
       require_edge:
         description: "1 = صوت edge-tts فقط، 0 = السماح بالصوت البديل"
         default: "1"
+      topic:
+        description: "موضوع الفيديو ليكتب Gemini السكربت (او auto). فارغ = استخدم story.json الموجود أو ولد تلقائياً"
+        default: ""
+      gemini_model:
+        description: "اسم نموذج Gemini (اختياري، فارغ = اختيار تلقائي)"
+        default: ""
 
 permissions:
   contents: write
@@ -44,10 +50,57 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           pip install -U edge-tts gTTS numpy
+          
+      - name: Write script with Gemini (Auto or Manual)
+        # المنطق الجديد: شغّل السكربت إذا كتبت موضوعاً، أو إذا كان الملف غير موجود
+        run: |
+          if [ "${{ inputs.topic }}" != "" ] || [ ! -f "src/story/episodes/$EP/story.json" ]; then
+            echo "توليد السكربت..."
+            python3 tools/gen_story.py
+          else
+            echo "الملف موجود مسبقاً، سيتم تخطي التوليد واستخدام الملف الحالي."
+          fi
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TOPIC: ${{ inputs.topic }}
+          MODEL: ${{ inputs.gemini_model }}
+
+      - name: Save script to repo
+        # حفظ الملف فقط إذا تم توليده (لتجنب أخطاء Git إذا لم يتغير شيء)
+        run: |
+          if [ -f "src/story/episodes/$EP/story.json" ]; then
+            git config user.name "video-bot"
+            git config user.email "bot@users.noreply.github.com"
+            git add "src/story/episodes/$EP/story.json"
+            git commit -m "script for $EP" || echo "nothing to commit"
+            git push || echo "push skipped"
+          fi
+
+      - name: Verify story.json exists
+        run: |
+          if [ ! -f "src/story/episodes/$EP/story.json" ]; then
+            echo "❌ خطأ: ملف story.json غير موجود!"
+            exit 1
+          fi
+
       - name: Build voice, music and sfx
         run: python3 tools/build_story.py "$EP"
         env:
           REQUIRE_EDGE: ${{ inputs.require_edge }}
+          
+      - name: Fill missing timelines of other episodes
+        run: |
+          for d in src/story/episodes/*/; do
+            n=$(basename "$d")
+            if [ -f "$d/story.json" ] && { [ ! -f "$d/timeline.json" ] || [ ! -f "$d/mouth.json" ]; }; then
+              echo "dry build for $n"
+              python3 tools/build_story.py "$n" --dry
+            fi
+          done
+          
+      - name: Update registry
+        run: python3 tools/gen_registry.py
+        
       - name: Plan chunks
         id: plan
         run: |
@@ -64,8 +117,9 @@ jobs:
               f.write("total=" + str(n) + "\n")
           print("frames:", n, "chunks:", len(m))
           PY
+          
       - name: Pack assets
-        run: tar czf assets.tgz "public/episodes/$EP" "src/story/episodes/$EP"
+        run: tar czf assets.tgz "public/episodes/$EP" "src/story/episodes/$EP" src/story/registry.ts
       - uses: actions/upload-artifact@v4
         with:
           name: assets
@@ -89,7 +143,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fonts-noto-core fonts-noto-color-emoji libnss3 libdbus-1-3 libatk1.0-0t64 libasound2t64 libxrandr2 libxkbcommon-x11-0 libxfixes3 libxcomposite1 libxdamage1 libgbm-dev libcups2t64 libatk-bridge2.0-0t64 libpango-1.0-0 libcairo2
       - run: npm install --no-audit --no-fund
-      - run: npx remotion still src/index.ts "$EP-thumb" thumb.png --gl=swangle
+      - run: npx remotion still src/index.ts "$EP-thumb" thumb.png --gl=swangle --timeout=180000
       - uses: actions/upload-artifact@v4
         with:
           name: thumb
@@ -121,7 +175,14 @@ jobs:
         run: |
           COMP="$EP"
           if [ "$FORMAT" = "16x9" ]; then COMP="$EP-16x9"; fi
-          npx remotion render src/index.ts "$COMP" chunk.mp4 --frames=${{ matrix.a }}-${{ matrix.b }} --muted --scale="$SCALE" --gl=swangle --concurrency="$(nproc)"
+          for try in 1 2 3; do
+            if npx remotion render src/index.ts "$COMP" chunk.mp4 --frames=${{ matrix.a }}-${{ matrix.b }} --muted --scale="$SCALE" --gl=swangle --concurrency="$(nproc)" --timeout=180000; then
+              break
+            fi
+            echo "attempt $try failed"
+            rm -f chunk.mp4
+            if [ "$try" = "3" ]; then exit 1; fi
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: chunk-${{ matrix.i }}
