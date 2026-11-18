@@ -1,14 +1,38 @@
 #!/usr/bin/env python3
 """يكتب سكربت حلقة (story.json) بواسطة Gemini من موضوع.
 متغيرات البيئة: EP (اسم الحلقة) ، TOPIC (الموضوع او auto) ، GEMINI_API_KEY ، MODEL (اختياري)"""
-import datetime, json, os, pathlib, re, sys, time, urllib.error, urllib.request
+import datetime, json, os, pathlib, re, socket, sys, time, urllib.error, urllib.request
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
+# --- البحث الذكي عن جذر المشروع ---
+def get_project_root():
+    """يبحث عن جذر المشروع من خلال البحث عن مجلد src أو ملف package.json"""
+    current = pathlib.Path(__file__).resolve().parent
+    for _ in range(5):  # البحث حتى 5 مستويات للأعلى
+        if (current / "src").exists() or (current / "package.json").exists():
+            return current
+        current = current.parent
+    return pathlib.Path.cwd()  # كخيار أخير
+
+ROOT = get_project_root()
+# ---------------------------------------------
+
 EP = os.environ.get("EP", "").strip()
 TOPIC = os.environ.get("TOPIC", "").strip()
 KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 FORCE = os.environ.get("MODEL", "").strip()
 BASE = "https://generativelanguage.googleapis.com/v1beta/"
+
+# النماذج المتاحة في الباقة المجانية (Free tier) مرتبة من الافضل للاخف.
+# الاسماء المستعارة (latest) تشير دائما لاحدث نسخة مستقرة.
+FREE_MODELS = [
+    "gemini-flash-latest",
+    "gemini-2.5-flash",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+]
+MAX_MODELS = 9  # اقصى عدد نماذج تُجرَّب
 
 if not re.fullmatch(r"[A-Za-z0-9-]+", EP):
     sys.exit("اسم الحلقة يجب ان يكون حروفا انجليزية او ارقاما او شرطة فقط")
@@ -49,42 +73,70 @@ SYSTEM = '''أنت كاتب سكربتات لقناة «أسرار النفس» 
 أخرج JSON فقط بهذا الشكل ولا تكتب أي شرح:
 {"title":"عنوان قصير مثير مع إيموجي","hook":"سؤال قصير جدا حتى 6 كلمات مع إيموجي","answer_hook":"الجواب: ... حتى 5 كلمات مع إيموجي","comment_question":"سؤال قصير للتعليقات","tease_index":4,"reveal_index":7,"lines":[{"who":"salem","text":"...","anim":"talk","emotion":"surprised","shot":"close"}]}'''
 
-def call(method, path, body=None):
+
+def call(method, path, body=None, timeout=120):
+    """يرجع (status, json). اخطاء الشبكة والمهلة تتحول الى اكواد بدل ان تقتل السكربت."""
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(BASE + path, data=data, method=method,
                                  headers={"Content-Type": "application/json", "x-goog-api-key": KEY})
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         try: msg = json.loads(e.read().decode("utf-8"))
         except Exception: msg = {}
         return e.code, msg
+    except (TimeoutError, socket.timeout):
+        return 504, {"error": "timeout"}
+    except urllib.error.URLError as e:
+        return 503, {"error": "network: " + str(e.reason)}
+    except (ConnectionError, OSError) as e:
+        return 503, {"error": "conn: " + str(e)}
+    except Exception as e:
+        return 500, {"error": "unexpected: " + str(e)}
+
 
 def pick_models():
+    """الترتيب: النموذج المحدد يدويا ثم النماذج المجانية المتاحة ثم اي نماذج flash اخرى مكتشفة."""
     first = [FORCE] if FORCE else []
-    st, d = call("GET", "models?pageSize=200")
+    st, d = call("GET", "models?pageSize=200", timeout=30)
     if st != 200:
         print("تعذر جلب قائمة النماذج:", st, str(d)[:200])
-        return first or ["gemini-2.5-flash", "gemini-flash-latest"]
+        return list(dict.fromkeys(first + FREE_MODELS))[:MAX_MODELS]
+
+    available = set()
     c = []
     for m in d.get("models", []):
         n = m.get("name", "").replace("models/", "")
-        if "generateContent" not in m.get("supportedGenerationMethods", []) or "flash" not in n:
+        if "generateContent" not in m.get("supportedGenerationMethods", []):
+            continue
+        available.add(n)
+        if "flash" not in n:
             continue
         if re.search(r"image|tts|audio|live|embed|robot|computer|vision|thinking|exp|native", n):
             continue
         v = tuple(int(x) for x in re.findall(r"\d+", n)[:2]) or (0,)
         c.append((("preview" not in n, v, "lite" not in n), n))
     c.sort(reverse=True)
-    names = first + [n for _, n in c if n not in first]
-    return names[:5] or ["gemini-2.5-flash"]
+    discovered = [n for _, n in c]
+
+    free = [n for n in FREE_MODELS if n in available]
+    names = list(dict.fromkeys(first + free + discovered))
+    return names[:MAX_MODELS] or list(dict.fromkeys(first + FREE_MODELS))[:MAX_MODELS]
+
 
 def parse_json(txt):
-    try: return json.loads(txt)
+    try:
+        return json.loads(txt)
     except Exception:
         m = re.search(r"\{.*\}", txt, re.S)
-        return json.loads(m.group(0)) if m else None
+        if m:
+            try:
+                return json.loads(m.group(0))
+            except Exception:
+                return None
+        return None
+
 
 def ask(model, feedback):
     prompt = "الموضوع: " + TOPIC + feedback
@@ -98,7 +150,9 @@ def ask(model, feedback):
     except Exception:
         return 422, d, None
 
+
 def words(s): return len(re.findall(r"\S+", s))
+
 
 def check(js):
     """يرجع (hard, soft): hard = خطأ بنيوي ، soft = عدد الكلمات خارج المدى."""
@@ -113,15 +167,16 @@ def check(js):
     if not (isinstance(ti, int) and isinstance(ri, int) and 1 <= ti < ri < len(L)):
         return "tease_index و reveal_index يجب ان يكونا اعدادا صحيحة بحيث 1 <= tease_index < reveal_index < عدد الاسطر", ""
     w = sum(words(str(l["text"])) for l in L)
-    if not 75 <= w <= 100: return "", "عدد كلمات الحوار " + str(w) + " والمطلوب بين 80 و95"
+    if not 80 <= w <= 95: return "", "عدد كلمات الحوار " + str(w) + " والمطلوب بين 80 و95"
     return "", ""
+
 
 print("الموضوع:", TOPIC)
 models = pick_models()
 print("النماذج المرشحة:", models)
 data = soft_ok = None; used = ""; fb = ""
 for model in models:
-    for attempt in range(3):
+    for attempt in range(2):
         st, d, js = ask(model, fb)
         if st == 200 and js is not None:
             hard, soft = check(js)
@@ -131,8 +186,18 @@ for model in models:
             fb = "\nتصحيح مطلوب بعد المحاولة السابقة: " + msg
             print(model, "محاولة", attempt + 1, "مرفوضة:", msg)
             continue
-        if st in (429, 503):
-            print(model, st, "ضغط او حد استخدام: انتظار 20 ثانية"); time.sleep(20); continue
+        if st in (200, 422):
+            print(model, "رد غير مفهوم، اعادة المحاولة")
+            continue
+        if st == 429:
+            # حصة هذا النموذج انتهت (الباقة المجانية): لكل نموذج حصة مستقلة، فننتقل للتالي فورا
+            print(model, "429 انتهت الحصة، الانتقال للنموذج التالي")
+            break
+        if st in (503, 504, 500):
+            wait = 5 if st == 504 else 10
+            print(model, st, "ضغط او مهلة: انتظار", wait, "ثانية")
+            time.sleep(wait)
+            continue
         if st == 403:
             sys.exit("403 رفض الوصول: " + str(d)[:300] + "\nتأكد من تفعيل التحقق بخطوتين ورقم الهاتف لحساب Google ثم انشئ مفتاحا جديدا من AI Studio.")
         print(model, st, str(d)[:200]); break
@@ -140,7 +205,7 @@ for model in models:
 if not data and soft_ok:
     data = soft_ok; print("تنبيه: عدد الكلمات خارج المدى المثالي لكن البنية سليمة")
 if not data:
-    sys.exit("فشل توليد السكربت: جرب نموذجا اخر في خانة gemini_model او اعد التشغيل لاحقا")
+    sys.exit("فشل توليد السكربت: كل النماذج مشغولة او انتهت حصتها. جرب نموذجا اخر في خانة gemini_model او اعد التشغيل لاحقا")
 
 L = []
 for i, l in enumerate(data["lines"]):
@@ -176,9 +241,12 @@ story = {
     },
     "lines": L,
 }
+
+# انشاء الملف في المسار الصحيح دائماً
 ED = ROOT / "src/story/episodes" / EP
 ED.mkdir(parents=True, exist_ok=True)
 (ED / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
+
 total = sum(words(x["text"]) for x in L)
 print("تم:", EP, "| النموذج:", used, "| الاسطر:", len(L), "| الكلمات:", total, "| المدة التقريبية:", round(total / 2.4 + len(L) * 0.33 + 2), "ثانية")
 
