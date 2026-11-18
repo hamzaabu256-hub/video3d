@@ -1,0 +1,137 @@
+{
+  "title": "لماذا تتعب بلا جهد؟ 🥱",
+  "subtitle": "أسرار النفس",
+  "brand": "أسرار النفس",
+  "outro": "اشترك في أسرار النفس 🔔",
+  "outroSub": "محتوى توعوي ولا يغني عن استشارة مختص",
+  "set": "office",
+  "music": "mystery",
+  "sfx": true,
+  "introFrames": 0,
+  "outroFrames": 60,
+  "characters": {
+    "salem": {
+      "name": "سالم",
+      "voice": "ar-EG-ShakirNeural",
+      "gttsPitch": 0.94,
+      "color": "#ffd166",
+      "spec": {
+        "skin": "#e6b98f",
+        "shirt": "#2f6f73",
+        "pants": "#222a3a",
+        "hair": "#2b1d17",
+        "beard": true
+      }
+    },
+    "layla": {
+      "name": "ليلى",
+      "voice": "ar-EG-SalmaNeural",
+      "gttsPitch": 1.16,
+      "color": "#7dd3fc",
+      "spec": {
+        "skin": "#f2c9a0",
+        "shirt": "#b5486a",
+        "pants": "#2e3a56",
+        "hair": "#4a2a1a",
+        "long": true
+      }
+    }
+  },
+  "lines": [
+    {
+      "who": "salem",
+      "text": "لماذا أشعر بالتعب الشديد رغم أنني لم أفعل شيئاً طوال اليوم؟ انتظروا الجواب في النهاية!",
+      "anim": "point",
+      "emotion": "surprised",
+      "shot": "close",
+      "hook": "متعب بلا سبب؟ 😴"
+    },
+    {
+      "who": "layla",
+      "text": "هذا شعور يختبره الكثيرون يا سالم.",
+      "anim": "idle",
+      "emotion": "neutral",
+      "shot": "medium"
+    },
+    {
+      "who": "salem",
+      "text": "لكنني جلست فقط! كيف أتعب؟",
+      "anim": "shrug",
+      "emotion": "surprised",
+      "shot": "two"
+    },
+    {
+      "who": "layla",
+      "text": "التفكير المستمر يستهلك طاقة الدماغ.",
+      "anim": "point",
+      "emotion": "neutral",
+      "shot": "medium"
+    },
+    {
+      "who": "salem",
+      "text": "وسأكشف لكم السبب النفسي الخفي بعد لحظات.",
+      "anim": "talk",
+      "emotion": "happy",
+      "shot": "close",
+      "hook": "الإجابة بعد لحظات ⏳"
+    },
+    {
+      "who": "salem",
+      "text": "أنا متحمس لأعرف الإجابة حقاً.",
+      "anim": "talk",
+      "emotion": "neutral",
+      "shot": "two"
+    },
+    {
+      "who": "salem",
+      "text": "الجواب غالباً هو الضغط النفسي الكامن.",
+      "anim": "talk",
+      "emotion": "neutral",
+      "shot": "medium"
+    },
+    {
+      "who": "layla",
+      "text": "عندما يقلق العقل بصمت، فإنه يحرق الطاقة تماماً كالجسم النشط.",
+      "anim": "think",
+      "emotion": "neutral",
+      "shot": "close",
+      "hook": "الجواب بالنهاية! 👇"
+    },
+    {
+      "who": "salem",
+      "text": "معلومة مذهلة ومفيدة حقاً.",
+      "anim": "talk",
+      "emotion": "surprised",
+      "shot": "two"
+    },
+    {
+      "who": "layla",
+      "text": "استشر مختصاً إن استمر التعب وأثر على حياتك اليومية.",
+      "anim": "talk",
+      "emotion": "neutral",
+      "shot": "medium"
+    },
+    {
+      "who": "salem",
+      "cta": true,
+      "text": "إن أعجبك الفيديو، فاضغط إعجاب، واشترك في أسرار النفس، وفعّل الجرس!",
+      "anim": "celebrate",
+      "emotion": "happy",
+      "shot": "two"
+    },
+    {
+      "who": "layla",
+      "cta": true,
+      "text": "واكتب في التعليقات: هل تشعر بهذا الإرهاق؟ وأرسله لصديق!",
+      "anim": "clap",
+      "emotion": "happy",
+      "shot": "two",
+      "react": {
+        "salem": {
+          "anim": "wave",
+          "emotion": "happy"
+        }
+      }
+    }
+  ]
+}
